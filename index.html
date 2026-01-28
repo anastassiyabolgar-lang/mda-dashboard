@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MDA W4 Q1 Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --emerald: #3fb950;
+            --emerald-dim: rgba(63,185,80,0.15);
+            --rose: #f85149;
+            --rose-dim: rgba(248,81,73,0.15);
+            --amber: #d29922;
+            --amber-dim: rgba(210,153,34,0.15);
+            --sky: #58a6ff;
+            --sky-dim: rgba(88,166,255,0.15);
+            --violet: #a371f7;
+            --violet-dim: rgba(163,113,247,0.15);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); font-size: 12px; line-height: 1.5; }
+        .dashboard { max-width: 1400px; margin: 0 auto; padding: 16px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .header h1 { font-size: 20px; font-weight: 700; }
+        .header h1 span { color: var(--sky); }
+        .meta { color: var(--text-secondary); font-size: 11px; }
+        
+        .main-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+        .main-tab { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .main-tab:hover { border-color: var(--text-muted); }
+        .main-tab.active { border-color: var(--sky); background: var(--sky-dim); }
+        .main-tab.active.margin-tab { border-color: var(--violet); background: var(--violet-dim); }
+        .tab-title { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+        .tab-value { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .tab-comp { font-size: 11px; color: var(--text-secondary); }
+        
+        .content { display: none; }
+        .content.active { display: block; }
+        
+        .filter-bar { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; padding: 8px 12px; background: var(--bg-secondary); border-radius: 6px; }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-label { font-size: 11px; color: var(--text-secondary); }
+        .filter-btn, .filter-btn-margin { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+        .filter-btn:hover { border-color: var(--sky); color: var(--text-primary); }
+        .filter-btn.active { background: var(--sky-dim); border-color: var(--sky); color: var(--sky); }
+        .filter-btn-margin:hover { border-color: var(--violet); color: var(--text-primary); }
+        .filter-btn-margin.active { background: var(--violet-dim); border-color: var(--violet); color: var(--violet); }
+        
+        .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+        .summary-card { background: var(--bg-secondary); border-radius: 6px; padding: 10px; border-left: 3px solid var(--border); }
+        .summary-card.emerald { border-left-color: var(--emerald); }
+        .summary-card.amber { border-left-color: var(--amber); }
+        .summary-card.rose { border-left-color: var(--rose); }
+        .summary-card.violet { border-left-color: var(--violet); }
+        .summary-card .label { font-size: 10px; color: var(--text-secondary); margin-bottom: 2px; }
+        .summary-card .value { font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .summary-card .badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 10px; margin-top: 4px; font-weight: 600; }
+        .summary-card .badge.up { background: var(--emerald-dim); color: var(--emerald); }
+        .summary-card .badge.down { background: var(--rose-dim); color: var(--rose); }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .card-title { font-size: 12px; font-weight: 600; }
+        .card-badge { font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+        .badge-sky { background: var(--sky-dim); color: var(--sky); }
+        .badge-violet { background: var(--violet-dim); color: var(--violet); }
+        .badge-rose { background: var(--rose-dim); color: var(--rose); }
+        
+        .manager-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .manager-card { background: var(--bg-tertiary); border-radius: 6px; padding: 10px; }
+        .manager-card .name { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 600; font-size: 11px; }
+        .manager-card .row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 2px; }
+        .manager-card .row-label { color: var(--text-secondary); }
+        .manager-card .row-value { font-family: 'JetBrains Mono', monospace; }
+        .progress-bar-container { height: 4px; background: var(--bg-primary); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+        
+        .table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .table th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table td { padding: 7px 6px; border-bottom: 1px solid var(--bg-tertiary); }
+        .table tr:hover { background: var(--bg-tertiary); }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .text-emerald { color: var(--emerald); }
+        .text-rose { color: var(--rose); }
+        .text-amber { color: var(--amber); }
+        .text-muted { color: var(--text-muted); }
+        
+        .ch-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+        .ch-retail { background: var(--emerald-dim); color: var(--emerald); }
+        .ch-internet { background: var(--sky-dim); color: var(--sky); }
+        .ch-mp { background: var(--violet-dim); color: var(--violet); }
+        .ch-opt { background: var(--amber-dim); color: var(--amber); }
+        
+        .chart-box { height: 220px; }
+        .scrollable { max-height: 300px; overflow-y: auto; }
+        .scrollable::-webkit-scrollbar { width: 6px; }
+        .scrollable::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: 3px; }
+        .scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div>
+                <h1>MDA <span>W4</span> Q1</h1>
+                <div class="meta">4 Неделя 2026 • Накопительно за квартал</div>
+            </div>
+        </header>
+
+        <div class="main-tabs">
+            <div class="main-tab to-tab active" data-tab="to">
+                <div class="tab-title">📊 Товарооборот</div>
+                <div class="tab-value" id="to-total">7.42B ₸</div>
+                <div class="tab-comp">Q1: <span class="text-rose">84.6%</span> плана</div>
+            </div>
+            <div class="main-tab margin-tab" data-tab="margin">
+                <div class="tab-title">💰 Маржа</div>
+                <div class="tab-value" id="margin-total">1.62B ₸</div>
+                <div class="tab-comp">Q1: <span class="text-amber">99.8%</span> плана</div>
+            </div>
+            <div class="main-tab" data-tab="insights" style="border-color: var(--rose);">
+                <div class="tab-title">🔥 Инсайты & Модели</div>
+                <div class="tab-value" style="font-size: 18px;">Аналитика</div>
+                <div class="tab-comp">Ключевые выводы</div>
+            </div>
+        </div>
+
+        <!-- Товарооборот -->
+        <div class="content active" id="to">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <span class="filter-label">Период:</span>
+                    <button class="filter-btn active" data-period="week">W4 Неделя</button>
+                    <button class="filter-btn" data-period="quarter">Q1 Накопительно</button>
+                </div>
+            </div>
+            <div class="summary" id="summary-cards"></div>
+
+            <div class="card" style="margin-bottom: 10px;">
+                <div class="card-header">
+                    <span class="card-title" id="managers-to-title">Менеджеры W4 — Товарооборот</span>
+                    <span class="card-badge badge-sky">ТО</span>
+                </div>
+                <div class="manager-grid" id="managers-to-grid"></div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Менеджеры × Каналы (ТО)</span>
+                    </div>
+                    <div class="scrollable">
+                        <table class="table" id="mgr-ch-to-table">
+                            <thead><tr><th>Менеджер</th><th>Канал</th><th>План</th><th>Факт</th><th>Выполн.</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title" id="channels-chart-title">Каналы W4 — План vs Факт</span>
+                    </div>
+                    <div class="chart-box"><canvas id="channelsToChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Категории W4 — Невыполнение</span>
+                </div>
+                <div class="scrollable">
+                    <table class="table" id="categories-w4-table">
+                        <thead><tr><th>Категория</th><th>Факт ТО</th><th>Выполн.</th><th>Gap ТО</th><th>Gap Маржа</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Маржа -->
+        <div class="content" id="margin">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <span class="filter-label">Период:</span>
+                    <button class="filter-btn-margin active" data-period="week">W4 Неделя</button>
+                    <button class="filter-btn-margin" data-period="quarter">Q1 Накопительно</button>
+                </div>
+            </div>
+            <div class="summary" id="margin-summary-cards"></div>
+
+            <div class="card" style="margin-bottom: 10px;">
+                <div class="card-header">
+                    <span class="card-title" id="managers-margin-title">Менеджеры W4 — Маржа</span>
+                    <span class="card-badge badge-violet">Net Маржа</span>
+                </div>
+                <div class="manager-grid" id="managers-margin-grid"></div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Менеджеры × Каналы (Маржа)</span>
+                    </div>
+                    <div class="scrollable">
+                        <table class="table" id="mgr-ch-margin-table">
+                            <thead><tr><th>Менеджер</th><th>Канал</th><th>План</th><th>Факт</th><th>Выполн.</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title" id="margin-chart-title">Каналы W4 — Маржа</span>
+                    </div>
+                    <div class="chart-box"><canvas id="marginChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Категории W4 — Невыполнение маржи (Розница+Интернет)</span>
+                </div>
+                <div class="scrollable">
+                    <table class="table" id="categories-margin-table">
+                        <thead><tr><th>Категория</th><th>План ₸</th><th>Факт ₸</th><th>Вып. ₸</th><th>Gap ₸</th><th>План %</th><th>Факт %</th><th>Вып. %</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Инсайты -->
+        <div class="content" id="insights">
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <div class="card" style="border-left: 3px solid var(--rose);">
+                    <div class="card-header">
+                        <span class="card-title">🚨 КРИТИЧНО: Опт — системный провал</span>
+                        <span class="card-badge badge-rose">24.0% W4</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                        <b>W4:</b> Факт 40.0M из 168.0M плана (24.0%)<br>
+                        <b>Q1:</b> 198.0M из 867.0M (22.9%)<br>
+                        <span style="color: var(--rose);">Провал у ВСЕХ менеджеров по каналу Опт</span>
+                    </div>
+                </div>
+                <div class="card" style="border-left: 3px solid var(--amber);">
+                    <div class="card-header">
+                        <span class="card-title">⚠️ Товарооборот: недовыполнение</span>
+                        <span class="card-badge badge-rose">83.6% W4</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                        <b>W4:</b> 1.00B из 1.00B плана<br>
+                        <b>Q1:</b> 7.00B из 8.00B (84.6%)<br>
+                        <b>Gap W4:</b> <span style="color: var(--rose);">-284.0M</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <div class="card" style="border-left: 3px solid var(--violet);">
+                    <div class="card-header">
+                        <span class="card-title">💰 Маржа: статус</span>
+                        <span class="card-badge badge-violet">96.1% W4</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                        <b>W4:</b> 305.0M из 317.0M плана<br>
+                        <b>Q1:</b> 1624.0M (99.8%)<br>
+                        <b>Лучший канал:</b> МП РФ (176.4%)<br>
+                        <b>Худший:</b> Опт (25.9%)
+                    </div>
+                </div>
+                <div class="card" style="border-left: 3px solid var(--sky);">
+                    <div class="card-header">
+                        <span class="card-title">📊 Каналы W4</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+                        • <b>Розница:</b> 83.2% (724.0M)<br>
+                        • <b>Интернет:</b> 91.8% (454.0M)<br>
+                        • <b>МП РФ:</b> 115.2% (228.0M)<br>
+                        • <b>Опт:</b> <span style="color: var(--rose);">24.0%</span> (40.0M)
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card" style="border-left: 3px solid var(--rose);">
+                <div class="card-header">
+                    <span class="card-title">🔴 ТОП проблемных категорий W4</span>
+                    <span class="card-badge badge-rose">Требуют внимания</span>
+                </div>
+                <div class="scrollable">
+                    <table class="table">
+                        <thead><tr><th>Категория</th><th>Факт ТО</th><th>Выполн.</th><th>Gap ТО</th><th>Gap Маржа</th></tr></thead>
+                        <tbody id="insights-categories-table"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="grid-2" style="margin-top: 10px;">
+                <div class="card" style="border-left: 3px solid var(--emerald);">
+                    <div class="card-header">
+                        <span class="card-title">✅ Менеджеры выше плана</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;" id="insights-mgr-good"></div>
+                </div>
+                <div class="card" style="border-left: 3px solid var(--rose);">
+                    <div class="card-header">
+                        <span class="card-title">❌ Менеджеры ниже плана</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.6;" id="insights-mgr-bad"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === DATA ===
+        const weekNum = "4";
+        
+        const categoriesW4 = [{"category": "Холодильники", "fact": 274087245, "completion": 0.702, "gap": 116208431, "gap_margin": 7341082}, {"category": "Фронтальная загрузка", "fact": 412519915, "completion": 0.828, "gap": 85602409, "gap_margin": 0}, {"category": "Морозильники", "fact": 50898595, "completion": 0.462, "gap": 59336441, "gap_margin": 11868915}, {"category": "Пылесосы", "fact": 185264288, "completion": 0.786, "gap": 50489168, "gap_margin": 9631868}, {"category": "Встраиваемая посудомойка", "fact": 38897050, "completion": 0.775, "gap": 11281888, "gap_margin": 2330680}, {"category": "Сушильные машины", "fact": 33290833, "completion": 0.807, "gap": 7964853, "gap_margin": 0}, {"category": "Кондиционеры", "fact": 26664608, "completion": 0.773, "gap": 7840747, "gap_margin": 1431926}, {"category": "Вытяжки", "fact": 27564366, "completion": 0.857, "gap": 4598091, "gap_margin": 1009358}, {"category": "Воздухоочистители и увлажнители", "fact": 8264355, "completion": 0.695, "gap": 3621211, "gap_margin": 565183}, {"category": "Посудомоечные машины", "fact": 7203942, "completion": 0.695, "gap": 3160444, "gap_margin": 849764}, {"category": "Встраиваемая СВЧ", "fact": 22451863, "completion": 0.951, "gap": 1158323, "gap_margin": 118622}, {"category": "Встр. Духовка", "fact": 84008391, "completion": 0.999, "gap": 110248, "gap_margin": 0}];
+        const categoriesMarginData = [{"category": "Морозильники", "plan_margin": 19953860, "fact_margin": 7752048, "completion": 0.388, "gap": 12201812, "plan_pct": 20.6, "fact_pct": 21.2, "completion_pct": 1.033}, {"category": "Пылесосы", "plan_margin": 42020381, "fact_margin": 31894267, "completion": 0.759, "gap": 10126113, "plan_pct": 26.1, "fact_pct": 25.2, "completion_pct": 0.964}, {"category": "Холодильники", "plan_margin": 56731043, "fact_margin": 47028510, "completion": 0.829, "gap": 9702532, "plan_pct": 22.8, "fact_pct": 25.5, "completion_pct": 1.119}, {"category": "Встраиваемая посудомойка", "plan_margin": 11223823, "fact_margin": 8848932, "completion": 0.788, "gap": 2374891, "plan_pct": 27.6, "fact_pct": 28.2, "completion_pct": 1.022}, {"category": "Посудомоечные машины", "plan_margin": 1560529, "fact_margin": 642728, "completion": 0.412, "gap": 917800, "plan_pct": 18.2, "fact_pct": 11.8, "completion_pct": 0.652}, {"category": "Вытяжки", "plan_margin": 7305220, "fact_margin": 6394480, "completion": 0.875, "gap": 910739, "plan_pct": 28.2, "fact_pct": 28.4, "completion_pct": 1.007}, {"category": "Встраиваемая СВЧ", "plan_margin": 4485252, "fact_margin": 3621558, "completion": 0.807, "gap": 863693, "plan_pct": 27.6, "fact_pct": 27.1, "completion_pct": 0.981}, {"category": "Встр. Духовка", "plan_margin": 17774206, "fact_margin": 16939380, "completion": 0.953, "gap": 834825, "plan_pct": 26.6, "fact_pct": 27.4, "completion_pct": 1.033}, {"category": "Воздухоочистители и увлажнители", "plan_margin": 2429871, "fact_margin": 1974653, "completion": 0.813, "gap": 455217, "plan_pct": 24.8, "fact_pct": 28.8, "completion_pct": 1.162}, {"category": "Кондиционеры", "plan_margin": 3905294, "fact_margin": 3525395, "completion": 0.903, "gap": 379899, "plan_pct": 18.4, "fact_pct": 19.1, "completion_pct": 1.036}];
+        const managersQ1 = [{"short": "Жақсылықов Б.", "plan_to": 3923200580, "fact_to": 3450065691, "comp_to": 0.879, "net_margin": 753156550, "comp_margin": 0.901}, {"short": "Токтагул Т.", "plan_to": 2624285603, "fact_to": 1880939636, "comp_to": 0.717, "net_margin": 396233405, "comp_margin": 0.831}, {"short": "Мареков А.", "plan_to": 1274432125, "fact_to": 1157209531, "comp_to": 0.908, "net_margin": 292124452, "comp_margin": 0.832}, {"short": "Магазов А.", "plan_to": 479831641, "fact_to": 530819474, "comp_to": 1.106, "net_margin": 105748073, "comp_margin": 1.395}, {"short": "Аубакиров Ч.", "plan_to": 468453097, "fact_to": 402156673, "comp_to": 0.858, "net_margin": 77018670, "comp_margin": 0.925}];
+        const mgrChannelsQ1 = [{"manager": "Жақсылықов Б.", "channel": "Розница", "plan": 1699858962, "fact": 1820462775, "completion": 1.071, "net_margin": 483299890}, {"manager": "Токтагул Т.", "channel": "Розница", "plan": 1363114362, "fact": 1153773127, "completion": 0.846, "net_margin": 277994124}, {"manager": "Жақсылықов Б.", "channel": "Интернет", "plan": 1128560456, "fact": 1113147448, "completion": 0.986, "net_margin": 184248688}, {"manager": "Мареков А.", "channel": "Розница", "plan": 763162682, "fact": 752821729, "completion": 0.986, "net_margin": 215942990}, {"manager": "Токтагул Т.", "channel": "Интернет", "plan": 803562203, "fact": 457710779, "completion": 0.57, "net_margin": 67703680}, {"manager": "Жақсылықов Б.", "channel": "Маркетплейс РФ", "plan": 584869409, "fact": 409895003, "completion": 0.701, "net_margin": 72641785}, {"manager": "Мареков А.", "channel": "Интернет", "plan": 367098718, "fact": 319756231, "completion": 0.871, "net_margin": 61222947}, {"manager": "Магазов А.", "channel": "Розница", "plan": 294605595, "fact": 292813784, "completion": 0.994, "net_margin": 74340634}, {"manager": "Аубакиров Ч.", "channel": "Розница", "plan": 243347120, "fact": 243330159, "completion": 1.0, "net_margin": 55603965}, {"manager": "Токтагул Т.", "channel": "Маркетплейс РФ", "plan": 249598627, "fact": 194083438, "completion": 0.778, "net_margin": 40483033}, {"manager": "Магазов А.", "channel": "Интернет", "plan": 126282871, "fact": 184554669, "completion": 1.461, "net_margin": 23748344}, {"manager": "Аубакиров Ч.", "channel": "Интернет", "plan": 152973261, "fact": 138631367, "completion": 0.906, "net_margin": 19407511}, {"manager": "Жақсылықов Б.", "channel": "Опт", "plan": 509911752, "fact": 106560462, "completion": 0.209, "net_margin": 12966185}, {"manager": "Мареков А.", "channel": "Маркетплейс РФ", "plan": 95983947, "fact": 82864425, "completion": 0.863, "net_margin": 14358128}, {"manager": "Токтагул Т.", "channel": "Опт", "plan": 208010409, "fact": 75372292, "completion": 0.362, "net_margin": 10052567}, {"manager": "Магазов А.", "channel": "Маркетплейс РФ", "plan": 24631228, "fact": 49284316, "completion": 2.001, "net_margin": 6575741}, {"manager": "Аубакиров Ч.", "channel": "Опт", "plan": 67336037, "fact": 10841279, "completion": 0.161, "net_margin": 1055217}, {"manager": "Аубакиров Ч.", "channel": "Маркетплейс РФ", "plan": 4796678, "fact": 9353867, "completion": 1.95, "net_margin": 951976}, {"manager": "Магазов А.", "channel": "Опт", "plan": 34311945, "fact": 4166704, "completion": 0.121, "net_margin": 1083352}, {"manager": "Мареков А.", "channel": "Опт", "plan": 48186778, "fact": 1767145, "completion": 0.037, "net_margin": 600385}];
+        const mgrChannelsMarginQ1 = [{"manager": "Жақсылықов Б.", "channel": "Розница", "plan": 433390069, "fact": 483299890, "completion": 1.115}, {"manager": "Токтагул Т.", "channel": "Розница", "plan": 322273606, "fact": 277994124, "completion": 0.863}, {"manager": "Мареков А.", "channel": "Розница", "plan": 201883696, "fact": 215942990, "completion": 1.07}, {"manager": "Жақсылықов Б.", "channel": "Интернет", "plan": 155073508, "fact": 184248688, "completion": 1.188}, {"manager": "Магазов А.", "channel": "Розница", "plan": 74355546, "fact": 74340634, "completion": 1.0}, {"manager": "Жақсылықов Б.", "channel": "Маркетплейс РФ", "plan": 76011523, "fact": 72641785, "completion": 0.956}, {"manager": "Токтагул Т.", "channel": "Интернет", "plan": 99992609, "fact": 67703680, "completion": 0.677}, {"manager": "Мареков А.", "channel": "Интернет", "plan": 65871564, "fact": 61222947, "completion": 0.929}, {"manager": "Аубакиров Ч.", "channel": "Розница", "plan": 58395958, "fact": 55603965, "completion": 0.952}, {"manager": "Токтагул Т.", "channel": "Маркетплейс РФ", "plan": 34837478, "fact": 40483033, "completion": 1.162}, {"manager": "Магазов А.", "channel": "Интернет", "plan": 17365803, "fact": 23748344, "completion": 1.368}, {"manager": "Аубакиров Ч.", "channel": "Интернет", "plan": 22084408, "fact": 19407511, "completion": 0.879}, {"manager": "Мареков А.", "channel": "Маркетплейс РФ", "plan": 11962438, "fact": 14358128, "completion": 1.2}, {"manager": "Жақсылықов Б.", "channel": "Опт", "plan": 37668638, "fact": 12966185, "completion": 0.344}, {"manager": "Токтагул Т.", "channel": "Опт", "plan": 16160851, "fact": 10052567, "completion": 0.622}, {"manager": "Магазов А.", "channel": "Маркетплейс РФ", "plan": 2303440, "fact": 6575741, "completion": 2.855}, {"manager": "Магазов А.", "channel": "Опт", "plan": 3036118, "fact": 1083352, "completion": 0.357}, {"manager": "Аубакиров Ч.", "channel": "Опт", "plan": 8492304, "fact": 1055217, "completion": 0.124}, {"manager": "Аубакиров Ч.", "channel": "Маркетплейс РФ", "plan": 545076, "fact": 951976, "completion": 1.747}, {"manager": "Мареков А.", "channel": "Опт", "plan": 4661729, "fact": 600385, "completion": 0.129}];
+        const managersMarginQ1 = [{"short": "Жақсылықов Б.", "plan_margin": 702143738, "fact_margin": 753156548, "comp_margin": 1.073}, {"short": "Токтагул Т.", "plan_margin": 473264544, "fact_margin": 396233404, "comp_margin": 0.837}, {"short": "Мареков А.", "plan_margin": 284379427, "fact_margin": 292124450, "comp_margin": 1.027}, {"short": "Магазов А.", "plan_margin": 97060907, "fact_margin": 105748071, "comp_margin": 1.09}, {"short": "Аубакиров Ч.", "plan_margin": 89517746, "fact_margin": 77018669, "comp_margin": 0.86}];
+        
+        const channelsW4 = [{"name": "Розница", "plan": 870667540, "fact": 724480937, "comp": 83.2}, {"name": "Интернет", "plan": 495237775, "fact": 454451472, "comp": 91.8}, {"name": "МП РФ", "plan": 198225691, "fact": 228336066, "comp": 115.2}, {"name": "Опт", "plan": 168102724, "fact": 40408020, "comp": 24.0}];
+        const channelsQ1 = [{"name": "Розница", "plan": 4364088724, "fact": 4263201576, "comp": 97.7}, {"name": "Интернет", "plan": 2578477510, "fact": 2213800496, "comp": 85.9}, {"name": "МП РФ", "plan": 959879891, "fact": 745481051, "comp": 77.7}, {"name": "Опт", "plan": 867756923, "fact": 198707883, "comp": 22.9}];
+        const totalW4 = {"plan": 1732233730, "fact": 1447676495, "comp": 83.6};
+        const totalQ1 = {"plan": 8770203048, "fact": 7421191006, "comp": 84.6};
+        
+        const marginW4 = [{"name": "Розница", "plan": 211279406, "fact": 186075601, "comp": 88.1}, {"name": "Интернет", "plan": 68369190, "fact": 72627513, "comp": 106.2}, {"name": "МП РФ", "plan": 24414279, "fact": 43073448, "comp": 176.4}, {"name": "Опт", "plan": 13823032, "fact": 3580720, "comp": 25.9}];
+        const marginQ1 = [{"name": "Розница", "plan": 1107316063, "fact": 1107181606, "comp": 100.0}, {"name": "Интернет", "plan": 353434666, "fact": 356331172, "comp": 100.8}, {"name": "МП РФ", "plan": 85242208, "fact": 135010665, "comp": 158.4}, {"name": "Опт", "plan": 81712570, "fact": 25757708, "comp": 31.5}];
+        const totalMarginW4 = {"plan": 317885907, "fact": 305357282, "comp": 96.1};
+        const totalMarginQ1 = {"plan": 1627705507, "fact": 1624281151, "comp": 99.8};
+        
+        let currentPeriod = 'week';
+        let currentMarginPeriod = 'week';
+        
+        // === HELPERS ===
+        const fmt = (n) => {
+            if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(2) + 'B';
+            if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(0) + 'M';
+            if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(0) + 'K';
+            return n.toFixed(0);
+        };
+        const pct = (n) => (n * 100).toFixed(1) + '%';
+        
+        // === TAB SWITCHING ===
+        document.querySelectorAll('.main-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // === RENDER FUNCTIONS ===
+        function renderSummaryCards() {
+            const channels = currentPeriod === 'week' ? channelsW4 : channelsQ1;
+            const total = currentPeriod === 'week' ? totalW4 : totalQ1;
+            const label = currentPeriod === 'week' ? 'W' + weekNum : 'Q1';
+            
+            const getColor = (comp) => comp >= 100 ? 'emerald' : (comp >= 85 ? 'amber' : 'rose');
+            const getBadge = (comp) => comp >= 100 ? 'up' : 'down';
+            
+            document.getElementById('summary-cards').innerHTML = channels.map(c => `
+                <div class="summary-card ${getColor(c.comp)}">
+                    <div class="label">${c.name} ${label}</div>
+                    <div class="value">${fmt(c.fact)} ₸</div>
+                    <div class="badge ${getBadge(c.comp)}">${c.comp.toFixed(1)}%</div>
+                </div>
+            `).join('') + `
+                <div class="summary-card violet">
+                    <div class="label">Итого ${label}</div>
+                    <div class="value">${fmt(total.fact)} ₸</div>
+                    <div class="badge ${getBadge(total.comp)}">${total.comp.toFixed(1)}%</div>
+                </div>
+            `;
+            
+            document.getElementById('managers-to-title').textContent = `Менеджеры ${label} — Товарооборот`;
+        }
+        
+        function renderMarginSummaryCards() {
+            const channels = currentMarginPeriod === 'week' ? marginW4 : marginQ1;
+            const total = currentMarginPeriod === 'week' ? totalMarginW4 : totalMarginQ1;
+            const label = currentMarginPeriod === 'week' ? 'W' + weekNum : 'Q1';
+            
+            const getColor = (comp) => comp >= 100 ? 'emerald' : (comp >= 85 ? 'amber' : 'rose');
+            const getBadge = (comp) => comp >= 100 ? 'up' : 'down';
+            
+            document.getElementById('margin-summary-cards').innerHTML = channels.map(c => `
+                <div class="summary-card ${getColor(c.comp)}">
+                    <div class="label">${c.name} ${label}</div>
+                    <div class="value">${fmt(c.fact)} ₸</div>
+                    <div class="badge ${getBadge(c.comp)}">${c.comp.toFixed(1)}%</div>
+                </div>
+            `).join('') + `
+                <div class="summary-card violet">
+                    <div class="label">Итого ${label}</div>
+                    <div class="value">${fmt(total.fact)} ₸</div>
+                    <div class="badge ${getBadge(total.comp)}">${total.comp.toFixed(1)}%</div>
+                </div>
+            `;
+            
+            document.getElementById('managers-margin-title').textContent = `Менеджеры ${label} — Маржа`;
+        }
+        
+        function renderManagersTO() {
+            const grid = document.getElementById('managers-to-grid');
+            grid.innerHTML = managersQ1.map(m => {
+                const cls = m.comp_to >= 1 ? 'text-emerald' : (m.comp_to >= 0.85 ? 'text-amber' : 'text-rose');
+                const progColor = m.comp_to >= 1 ? 'var(--emerald)' : (m.comp_to >= 0.85 ? 'var(--amber)' : 'var(--rose)');
+                return `<div class="manager-card">
+                    <div class="name"><span>${m.short}</span><span class="${cls}" style="font-family:'JetBrains Mono'">${pct(m.comp_to)}</span></div>
+                    <div class="row"><span class="row-label">Факт</span><span class="row-value">${fmt(m.fact_to)}</span></div>
+                    <div class="row"><span class="row-label">План</span><span class="row-value text-muted">${fmt(m.plan_to)}</span></div>
+                    <div class="progress-bar-container"><div class="progress-fill" style="width:${Math.min(m.comp_to*100,100)}%;background:${progColor}"></div></div>
+                </div>`;
+            }).join('');
+        }
+        
+        function renderManagersMargin() {
+            const grid = document.getElementById('managers-margin-grid');
+            grid.innerHTML = managersMarginQ1.map(m => {
+                const cls = m.comp_margin >= 1 ? 'text-emerald' : (m.comp_margin >= 0.9 ? 'text-amber' : 'text-rose');
+                const progColor = m.comp_margin >= 1 ? 'var(--emerald)' : (m.comp_margin >= 0.9 ? 'var(--amber)' : 'var(--rose)');
+                return `<div class="manager-card">
+                    <div class="name"><span>${m.short}</span><span class="${cls}" style="font-family:'JetBrains Mono'">${pct(m.comp_margin)}</span></div>
+                    <div class="row"><span class="row-label">Факт</span><span class="row-value">${fmt(m.fact_margin)}</span></div>
+                    <div class="row"><span class="row-label">План</span><span class="row-value text-muted">${fmt(m.plan_margin)}</span></div>
+                    <div class="progress-bar-container"><div class="progress-fill" style="width:${Math.min(m.comp_margin*100,100)}%;background:${progColor}"></div></div>
+                </div>`;
+            }).join('');
+        }
+        
+        function renderMgrChTO() {
+            const chClass = {'Розница':'ch-retail','Интернет':'ch-internet','Маркетплейс РФ':'ch-mp','Опт':'ch-opt'};
+            // Сортируем по менеджеру, затем по факту
+            const sorted = [...mgrChannelsQ1].sort((a, b) => {
+                if (a.manager !== b.manager) return a.manager.localeCompare(b.manager);
+                return b.fact - a.fact;
+            });
+            document.querySelector('#mgr-ch-to-table tbody').innerHTML = sorted.map(mc => {
+                const cls = mc.completion >= 1 ? 'text-emerald' : (mc.completion >= 0.8 ? 'text-amber' : 'text-rose');
+                return `<tr>
+                    <td style="font-weight:500">${mc.manager}</td>
+                    <td><span class="ch-pill ${chClass[mc.channel]}">${mc.channel}</span></td>
+                    <td class="mono text-muted">${fmt(mc.plan)}</td>
+                    <td class="mono">${fmt(mc.fact)}</td>
+                    <td class="mono ${cls}">${pct(mc.completion)}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function renderMgrChMargin() {
+            const chClass = {'Розница':'ch-retail','Интернет':'ch-internet','Маркетплейс РФ':'ch-mp','Опт':'ch-opt'};
+            // Сортируем по менеджеру, затем по факту
+            const sorted = [...mgrChannelsMarginQ1].sort((a, b) => {
+                if (a.manager !== b.manager) return a.manager.localeCompare(b.manager);
+                return b.fact - a.fact;
+            });
+            document.querySelector('#mgr-ch-margin-table tbody').innerHTML = sorted.map(mc => {
+                const cls = mc.completion >= 1 ? 'text-emerald' : (mc.completion >= 0.8 ? 'text-amber' : 'text-rose');
+                return `<tr>
+                    <td style="font-weight:500">${mc.manager}</td>
+                    <td><span class="ch-pill ${chClass[mc.channel]}">${mc.channel}</span></td>
+                    <td class="mono text-muted">${fmt(mc.plan)}</td>
+                    <td class="mono">${fmt(mc.fact)}</td>
+                    <td class="mono ${cls}">${pct(mc.completion)}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function renderCategoriesW4() {
+            document.querySelector('#categories-w4-table tbody').innerHTML = categoriesW4.map(c => {
+                const cls = c.completion >= 1 ? 'text-emerald' : (c.completion >= 0.85 ? 'text-amber' : 'text-rose');
+                return `<tr>
+                    <td style="font-weight:500">${c.category}</td>
+                    <td class="mono">${fmt(c.fact)}</td>
+                    <td class="mono ${cls}">${pct(c.completion)}</td>
+                    <td class="mono text-rose">-${fmt(c.gap)}</td>
+                    <td class="mono text-rose">${c.gap_margin > 0 ? '-' + fmt(c.gap_margin) : '—'}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function renderCategoriesMargin() {
+            document.querySelector('#categories-margin-table tbody').innerHTML = categoriesMarginData.map(c => {
+                const clsAbs = c.completion >= 1 ? 'text-emerald' : (c.completion >= 0.85 ? 'text-amber' : 'text-rose');
+                const clsPct = c.completion_pct >= 1 ? 'text-emerald' : (c.completion_pct >= 0.95 ? 'text-amber' : 'text-rose');
+                return `<tr>
+                    <td style="font-weight:500">${c.category}</td>
+                    <td class="mono text-muted">${fmt(c.plan_margin)}</td>
+                    <td class="mono">${fmt(c.fact_margin)}</td>
+                    <td class="mono ${clsAbs}">${pct(c.completion)}</td>
+                    <td class="mono text-rose">-${fmt(c.gap)}</td>
+                    <td class="mono text-muted">${c.plan_pct.toFixed(1)}%</td>
+                    <td class="mono">${c.fact_pct.toFixed(1)}%</td>
+                    <td class="mono ${clsPct}">${pct(c.completion_pct)}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // === CHARTS ===
+        let channelsChart = null;
+        function updateChannelsChart() {
+            const channels = currentPeriod === 'week' ? channelsW4 : channelsQ1;
+            const label = currentPeriod === 'week' ? 'W' + weekNum : 'Q1';
+            const divisor = currentPeriod === 'week' ? 1e6 : 1e9;
+            const suffix = currentPeriod === 'week' ? 'M' : 'B';
+            const planData = channels.map(c => Math.round(c.plan/divisor * 10) / 10);
+            const factData = channels.map(c => Math.round(c.fact/divisor * 10) / 10);
+            const maxVal = Math.round(Math.max(...planData) * 1.2);
+            
+            if (channelsChart) channelsChart.destroy();
+            
+            channelsChart = new Chart(document.getElementById('channelsToChart'), {
+                type: 'bar',
+                data: {
+                    labels: channels.map(c => c.name),
+                    datasets: [
+                        {label: 'План', data: planData, backgroundColor: '#6e7681', borderRadius: 3, order: 2},
+                        {label: 'Факт', data: factData, backgroundColor: '#58a6ff', borderRadius: 3, order: 2},
+                        {label: 'Выполнение %', data: channels.map(c => c.comp), type: 'line', borderColor: '#8b0000', backgroundColor: '#8b0000', pointBackgroundColor: '#8b0000', pointRadius: 5, pointHoverRadius: 7, borderWidth: 2, yAxisID: 'y1', tension: 0.3, order: 1}
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#8b949e', font: { size: 9 } } } },
+                    scales: {
+                        y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: v => Math.round(v) + suffix }, max: maxVal },
+                        y1: { grid: { display: false }, ticks: { color: '#8b0000', callback: v => v + '%' }, position: 'right', min: 0, max: 130 },
+                        x: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 9 } } }
+                    }
+                },
+                plugins: [{
+                    id: 'toLabels',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        chart.data.datasets.forEach((dataset, i) => {
+                            if (dataset.label === 'Выполнение %') {
+                                const meta = chart.getDatasetMeta(i);
+                                meta.data.forEach((point, index) => {
+                                    const value = dataset.data[index];
+                                    ctx.save();
+                                    ctx.fillStyle = '#8b0000';
+                                    ctx.font = 'bold 10px Inter';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText(value.toFixed(1) + '%', point.x, point.y - 6);
+                                    ctx.restore();
+                                });
+                            }
+                        });
+                    }
+                }]
+            });
+            
+            document.getElementById('channels-chart-title').textContent = `Каналы ${label} — План vs Факт`;
+        }
+        
+        let marginChart = null;
+        function updateMarginChart() {
+            const channels = currentMarginPeriod === 'week' ? marginW4 : marginQ1;
+            const label = currentMarginPeriod === 'week' ? 'W' + weekNum : 'Q1';
+            const divisor = 1e6;
+            const planData = channels.map(c => Math.round(c.plan/divisor));
+            const factData = channels.map(c => Math.round(c.fact/divisor));
+            const maxVal = Math.round(Math.max(...planData) * 1.2);
+            
+            if (marginChart) marginChart.destroy();
+            
+            marginChart = new Chart(document.getElementById('marginChart'), {
+                type: 'bar',
+                data: {
+                    labels: channels.map(c => c.name),
+                    datasets: [
+                        {label: 'План', data: planData, backgroundColor: '#6e7681', borderRadius: 3, order: 2},
+                        {label: 'Факт', data: factData, backgroundColor: '#58a6ff', borderRadius: 3, order: 2},
+                        {label: 'Выполнение %', data: channels.map(c => c.comp), type: 'line', borderColor: '#8b0000', backgroundColor: '#8b0000', pointBackgroundColor: '#8b0000', pointRadius: 5, pointHoverRadius: 7, borderWidth: 2, yAxisID: 'y1', tension: 0.3, order: 1}
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#8b949e', font: { size: 9 } } } },
+                    scales: {
+                        y: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: v => Math.round(v) + 'M' }, max: maxVal },
+                        y1: { grid: { display: false }, ticks: { color: '#8b0000', callback: v => v + '%' }, position: 'right', min: 0, max: 200 },
+                        x: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 9 } } }
+                    }
+                },
+                plugins: [{
+                    id: 'marginLabels',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        chart.data.datasets.forEach((dataset, i) => {
+                            if (dataset.label === 'Выполнение %') {
+                                const meta = chart.getDatasetMeta(i);
+                                meta.data.forEach((point, index) => {
+                                    const value = dataset.data[index];
+                                    ctx.save();
+                                    ctx.fillStyle = '#8b0000';
+                                    ctx.font = 'bold 10px Inter';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText(value.toFixed(1) + '%', point.x, point.y - 6);
+                                    ctx.restore();
+                                });
+                            }
+                        });
+                    }
+                }]
+            });
+            
+            document.getElementById('margin-chart-title').textContent = `Каналы ${label} — Маржа`;
+        }
+        
+        // === FILTER HANDLERS ===
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentPeriod = btn.dataset.period;
+                renderSummaryCards();
+                updateChannelsChart();
+            });
+        });
+        
+        document.querySelectorAll('.filter-btn-margin').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn-margin').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMarginPeriod = btn.dataset.period;
+                renderMarginSummaryCards();
+                updateMarginChart();
+            });
+        });
+        
+        // === INSIGHTS ===
+        function renderInsights() {
+            // Категории с проблемами
+            document.getElementById('insights-categories-table').innerHTML = categoriesW4.slice(0, 5).map(c => {
+                const cls = c.completion >= 1 ? 'text-emerald' : (c.completion >= 0.85 ? 'text-amber' : 'text-rose');
+                return `<tr>
+                    <td style="font-weight:500">${c.category}</td>
+                    <td class="mono">${fmt(c.fact)}</td>
+                    <td class="mono ${cls}">${pct(c.completion)}</td>
+                    <td class="mono text-rose">-${fmt(c.gap)}</td>
+                    <td class="mono text-rose">${c.gap_margin > 0 ? '-' + fmt(c.gap_margin) : '—'}</td>
+                </tr>`;
+            }).join('');
+            
+            // Менеджеры выше плана
+            const goodMgrs = managersQ1.filter(m => m.comp_to >= 1);
+            document.getElementById('insights-mgr-good').innerHTML = goodMgrs.length > 0 
+                ? goodMgrs.map(m => `• <b>${m.short}</b>: ${pct(m.comp_to)} (${fmt(m.fact_to)})`).join('<br>')
+                : '<span style="color: var(--text-muted);">Нет менеджеров выше плана</span>';
+            
+            // Менеджеры ниже плана
+            const badMgrs = managersQ1.filter(m => m.comp_to < 1).sort((a,b) => a.comp_to - b.comp_to);
+            document.getElementById('insights-mgr-bad').innerHTML = badMgrs.map(m => {
+                const cls = m.comp_to >= 0.85 ? 'text-amber' : 'text-rose';
+                return `• <b>${m.short}</b>: <span class="${cls}">${pct(m.comp_to)}</span> (${fmt(m.fact_to)})`;
+            }).join('<br>');
+        }
+        
+        // === INIT ===
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSummaryCards();
+            renderMarginSummaryCards();
+            renderManagersTO();
+            renderManagersMargin();
+            renderMgrChTO();
+            renderMgrChMargin();
+            renderCategoriesW4();
+            renderCategoriesMargin();
+            updateChannelsChart();
+            updateMarginChart();
+            renderInsights();
+        });
+    </script>
+</body>
+</html>
